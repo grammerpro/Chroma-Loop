@@ -5,7 +5,6 @@ module.exports = {
   },
   extends: [
     'eslint:recommended',
-    '@typescript-eslint/recommended',
   ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
@@ -13,5 +12,8 @@ module.exports = {
     sourceType: 'module',
   },
   plugins: ['@typescript-eslint'],
-  rules: {},
+  rules: {
+    'no-unused-vars': 'warn',
+    'no-console': 'off',
+  },
 };

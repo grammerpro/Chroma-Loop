@@ -91,7 +91,7 @@ export class UI {
     } else if (this.pauseVisible) {
       this.drawPause(ctx);
     } else if (this.tutorialVisible) {
-      this.drawTutorial(ctx);
+      this.drawTutorial();
     } else if (this.game.state === 'playing') {
       this.drawHUD(ctx);
     }
@@ -145,7 +145,7 @@ export class UI {
     ctx.fillText('Paused', ctx.canvas.width / 2, 150);
   }
 
-  drawTutorial(ctx: CanvasRenderingContext2D) {
+  drawTutorial() {
     // Draw tutorial overlay
   }
 
