@@ -26,13 +26,30 @@ export class AudioManager {
     oscillator.stop(this.context.currentTime + 0.1);
   }
 
+  playMatch() {
+    this.play('match');
+  }
+
+  playMiss() {
+    this.play('miss');
+  }
+
+  playStreak() {
+    this.play('streak');
+  }
+
   getFrequency(sound: string): number {
     switch (sound) {
       case 'match': return 440;
       case 'miss': return 220;
+      case 'streak': return 660;
       case 'star': return 880;
       default: return 440;
     }
+  }
+
+  setMuted(muted: boolean) {
+    this.muted = muted;
   }
 
   toggleMute() {

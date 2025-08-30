@@ -27,10 +27,22 @@
       width: 100vw;
       height: 100vh;
     }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
   </style>
 </head>
 <body>
-  <canvas id="game-canvas"></canvas>
+  <canvas id="game-canvas" aria-label="Chroma Loop game canvas"></canvas>
+  <div id="live-region" aria-live="polite" aria-atomic="true" class="sr-only"></div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
