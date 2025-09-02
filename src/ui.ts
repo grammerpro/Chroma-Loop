@@ -5,10 +5,11 @@ export class UI {
   gameOverVisible = false;
   pauseVisible = false;
   tutorialVisible = false;
-  buttons: Button[] = [];
+  buttons: any[] = [];
   hudScoreEl: HTMLElement | null = null;
   hudLivesEl: HTMLElement | null = null;
   liveRegionEl: HTMLElement | null = null;
+  uiContainerEl: HTMLElement | null = null;
 
   constructor(game: any) {
     this.game = game;
@@ -24,68 +25,94 @@ export class UI {
   this.hudScoreEl = document.getElementById('hudScore');
   this.hudLivesEl = document.getElementById('hudLives');
   this.liveRegionEl = document.getElementById('live-region');
+  this.uiContainerEl = document.getElementById('ui');
   this.updateHUD();
   }
 
   showMenu() {
     this.menuVisible = true;
-    this.gameOverVisible = false;
-    this.pauseVisible = false;
-    this.settingsVisible = false;
-    this.createMenuButtons();
+  this.gameOverVisible = false;
+  this.pauseVisible = false;
+  this.settingsVisible = false;
+  this.buttons = [];
+  this.renderMenuUI();
   }
 
   hideMenu() {
     this.menuVisible = false;
-    this.buttons = [];
+  this.buttons = [];
+  this.clearUI();
   }
 
   showSettings() {
     this.settingsVisible = true;
-    this.createSettingsButtons();
+  this.renderSettingsUI();
   }
 
   showGameOver() {
     this.gameOverVisible = true;
-    this.createGameOverButtons();
+  this.buttons = [];
+  this.renderGameOverUI();
   }
 
   showPause() {
     this.pauseVisible = true;
-    this.createPauseButtons();
+  this.buttons = [];
+  this.renderPauseUI();
   }
 
   hidePause() {
     this.pauseVisible = false;
-    this.buttons = [];
+  this.buttons = [];
+  this.clearUI();
   }
 
-  createMenuButtons() {
-    this.buttons = [
-      new Button('Start Daily', this.game.canvas.width / 2 - 100, 180, 200, 40, () => this.game.startDaily()),
-      new Button('Start Endless', this.game.canvas.width / 2 - 100, 230, 200, 40, () => this.game.startEndless()),
-      new Button('Settings', this.game.canvas.width / 2 - 100, 280, 200, 40, () => this.showSettings()),
-    ];
+  renderMenuUI() {
+    this.setUI([
+      this.makeButton('Start Daily', () => this.game.startDaily(), 'Start daily seeded run'),
+      this.makeButton('Start Endless', () => this.game.startEndless(), 'Start endless run'),
+      this.makeButton('Settings', () => this.showSettings(), 'Open settings'),
+      this.makeInfo(`Best Endless: ${this.game.bestEndless}`),
+      this.makeInfo(`Best Daily: ${this.game.bestDaily}`),
+    ]);
   }
 
-  createSettingsButtons() {
-    this.buttons = [
-      new Button('Back', this.game.canvas.width / 2 - 100, 300, 200, 40, () => this.showMenu()),
-    ];
+  renderSettingsUI() {
+    const muted = this.game.audio.muted;
+    const reduced = this.game.reducedMotion;
+    const muteToggle = this.makeToggle('Mute audio', muted, (checked) => {
+      this.game.audio.setMuted(checked);
+      this.game.saveSettings();
+    });
+    const rmToggle = this.makeToggle('Reduced motion', reduced, (checked) => {
+      this.game.reducedMotion = checked;
+      this.game.saveSettings();
+    });
+    this.setUI([
+      muteToggle,
+      rmToggle,
+      this.makeButton('Back', () => this.showMenu(), 'Back to menu'),
+    ]);
   }
 
-  createGameOverButtons() {
-    this.buttons = [
-      new Button('Restart', this.game.canvas.width / 2 - 100, 230, 200, 40, () => this.game.startGame(this.game.mode)),
-      new Button('Menu', this.game.canvas.width / 2 - 100, 280, 200, 40, () => this.game.returnToMenu()),
-    ];
+  renderGameOverUI() {
+    const info = this.makeInfo(`Final Score: ${this.game.score}`);
+    const best = this.makeInfo(`Best: ${this.game.mode === 'endless' ? this.game.bestEndless : this.game.bestDaily}`);
+    this.setUI([
+      this.makeHeading('Game Over'),
+      info,
+      best,
+      this.makeButton('Restart', () => this.game.startGame(this.game.mode), 'Restart run'),
+      this.makeButton('Menu', () => this.game.returnToMenu(), 'Back to menu'),
+    ]);
   }
 
-  createPauseButtons() {
-    this.buttons = [
-      new Button('Resume', this.game.canvas.width / 2 - 100, 200, 200, 40, () => this.game.resume()),
-      new Button('Menu', this.game.canvas.width / 2 - 100, 250, 200, 40, () => this.game.returnToMenu()),
-    ];
+  renderPauseUI() {
+    this.setUI([
+      this.makeHeading('Paused'),
+      this.makeButton('Resume', () => this.game.resume(), 'Resume game'),
+      this.makeButton('Menu', () => this.game.returnToMenu(), 'Back to menu'),
+    ]);
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -103,10 +130,7 @@ export class UI {
       this.drawHUD(ctx);
     }
 
-    // Draw buttons
-    for (const button of this.buttons) {
-      button.draw(ctx);
-    }
+  // DOM-based buttons handled via this.uiContainerEl
   }
 
   updateHUD() {
@@ -125,9 +149,9 @@ export class UI {
     ctx.font = '30px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('Chroma Loop', ctx.canvas.width / 2, 100);
-    ctx.font = '16px Arial';
-    ctx.fillText(`Best Endless: ${this.game.bestEndless}`, ctx.canvas.width / 2, 130);
-    ctx.fillText(`Best Daily: ${this.game.bestDaily}`, ctx.canvas.width / 2, 150);
+  ctx.font = '16px Arial';
+  ctx.fillText(`Best Endless: ${this.game.bestEndless}`, ctx.canvas.width / 2, 130);
+  ctx.fillText(`Best Daily: ${this.game.bestDaily}`, ctx.canvas.width / 2, 150);
   }
 
   drawSettings(ctx: CanvasRenderingContext2D) {
@@ -177,51 +201,74 @@ export class UI {
       ctx.fillText('♥', 10 + i * 25, 90);
     }
   }
+
+  // DOM UI helpers as class methods
+  clearUI() {
+    if (!this.uiContainerEl) return;
+    this.uiContainerEl.innerHTML = '';
+    this.uiContainerEl.setAttribute('style', 'display:none');
+  }
+
+  setUI(elements: HTMLElement[]) {
+    if (!this.uiContainerEl) return;
+    this.uiContainerEl.innerHTML = '';
+    for (const el of elements) this.uiContainerEl.appendChild(el);
+    this.uiContainerEl.setAttribute('style', 'display:flex');
+  }
+
+  makeButton(text: string, onClick: () => void, aria?: string) {
+    const btn = document.createElement('button');
+    btn.className = 'ui-button';
+    btn.type = 'button';
+    btn.textContent = text;
+    if (aria) btn.setAttribute('aria-label', aria);
+    btn.addEventListener('click', () => onClick());
+    onKeyActivate(btn, onClick);
+    return btn;
+  }
+
+  makeInfo(text: string) {
+    const div = document.createElement('div');
+    div.style.color = '#fff';
+    div.style.textAlign = 'center';
+    div.textContent = text;
+    return div;
+  }
+
+  makeHeading(text: string) {
+    const h = document.createElement('div');
+    h.style.color = '#fff';
+    h.style.font = '28px Arial, sans-serif';
+    h.style.textAlign = 'center';
+    h.setAttribute('role', 'heading');
+    h.textContent = text;
+    return h;
+  }
+
+  makeToggle(label: string, checked: boolean, onChange: (checked: boolean) => void) {
+    const wrapper = document.createElement('label');
+    wrapper.style.color = '#fff';
+    wrapper.style.display = 'flex';
+    wrapper.style.alignItems = 'center';
+    wrapper.style.gap = '8px';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = checked;
+    input.addEventListener('change', () => onChange(input.checked));
+    const span = document.createElement('span');
+    span.textContent = label;
+    wrapper.appendChild(input);
+    wrapper.appendChild(span);
+    return wrapper;
+  }
 }
 
-class Button {
-  text: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  onClick: () => void;
-  hovered = false;
-
-  constructor(text: string, x: number, y: number, width: number, height: number, onClick: () => void) {
-    this.text = text;
-    this.x = x;
-    this.y = y;
-    this.width = width;
-    this.height = height;
-    this.onClick = onClick;
-    this.init();
-  }
-
-  init() {
-    window.addEventListener('pointerdown', (e) => {
-      if (this.isInside(e.clientX, e.clientY)) {
-        this.onClick();
-      }
-    });
-    window.addEventListener('pointermove', (e) => {
-      this.hovered = this.isInside(e.clientX, e.clientY);
-    });
-  }
-
-  isInside(x: number, y: number): boolean {
-    return x >= this.x && x <= this.x + this.width && y >= this.y && y <= this.y + this.height;
-  }
-
-  draw(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = this.hovered ? '#666' : '#333';
-    ctx.fillRect(this.x, this.y, this.width, this.height);
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(this.x, this.y, this.width, this.height);
-    ctx.fillStyle = '#fff';
-    ctx.font = '16px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(this.text, this.x + this.width / 2, this.y + this.height / 2 + 5);
-  }
+// DOM helpers
+function onKeyActivate(el: HTMLElement, handler: () => void) {
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handler();
+    }
+  });
 }
