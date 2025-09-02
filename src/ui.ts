@@ -6,6 +6,9 @@ export class UI {
   pauseVisible = false;
   tutorialVisible = false;
   buttons: Button[] = [];
+  hudScoreEl: HTMLElement | null = null;
+  hudLivesEl: HTMLElement | null = null;
+  liveRegionEl: HTMLElement | null = null;
 
   constructor(game: any) {
     this.game = game;
@@ -18,6 +21,10 @@ export class UI {
       this.tutorialVisible = true;
       localStorage.setItem('tutorialSeen', 'true');
     }
+  this.hudScoreEl = document.getElementById('hudScore');
+  this.hudLivesEl = document.getElementById('hudLives');
+  this.liveRegionEl = document.getElementById('live-region');
+  this.updateHUD();
   }
 
   showMenu() {
@@ -100,6 +107,15 @@ export class UI {
     for (const button of this.buttons) {
       button.draw(ctx);
     }
+  }
+
+  updateHUD() {
+    if (this.hudScoreEl) this.hudScoreEl.textContent = `Score: ${this.game.score} · x${this.game.streak}`;
+    if (this.hudLivesEl) this.hudLivesEl.textContent = '♥'.repeat(this.game.lives);
+  }
+
+  announce(msg: string) {
+    if (this.liveRegionEl) this.liveRegionEl.textContent = msg;
   }
 
   drawMenu(ctx: CanvasRenderingContext2D) {

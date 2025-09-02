@@ -3,7 +3,7 @@ import { Drop } from './drop';
 import { Input } from './input';
 import { AudioManager } from './audio';
 import { UI } from './ui';
-import { RNG } from './rng';
+import { RNG, dateSeed } from './rng';
 import { Storage } from './storage';
 
 export type GameState = 'title' | 'playing' | 'paused' | 'gameOver';
@@ -31,6 +31,7 @@ export class Game {
   bestEndless = 0;
   bestDaily = 0;
   catches = 0;
+  reducedMotion = false;
 
   // Constants
   readonly STREAK_CAP = 10;
@@ -73,7 +74,7 @@ export class Game {
       this.resume();
     }
 
-    this.update(delta);
+  this.update(delta);
     this.draw();
 
     requestAnimationFrame((t) => this.gameLoop(t));
@@ -92,7 +93,12 @@ export class Game {
     }
 
     this.input.update();
-    this.ring.update(dt, this.input);
+    // Disable rotation changes when overlays are visible
+    if (this.ui.pauseVisible || this.ui.menuVisible || this.ui.gameOverVisible) {
+      // do not rotate ring
+    } else {
+      this.ring.update(dt, this.input);
+    }
 
     // Spawn drops
     if (this.rng.random() < 0.02 * this.level) {
@@ -109,16 +115,14 @@ export class Game {
       drop.update(dt);
       if (drop.y > this.canvas.height / 2 + 50) {
         const sector = this.ring.getSectorAtAngle(drop.angle);
-        if (sector === drop.color) {
-          this.onMatch(drop.isStar);
-        } else {
-          this.onMiss();
-        }
+    if (sector === drop.color) this.onMatch(drop.isStar);
+    else this.onMiss();
         this.drops.splice(i, 1);
       }
     }
 
     this.updateDifficulty();
+  this.ui.updateHUD();
   }
 
   updateDifficulty() {
@@ -138,6 +142,7 @@ export class Game {
       this.streak++;
       if (this.streak > 1) {
         this.audio.playStreak();
+    this.ui.announce('Streak up');
       }
     }
     if (isStar) {
@@ -145,20 +150,23 @@ export class Game {
       this.slowMotionTime = 2000;
       this.score += 50;
     }
+  this.ui.updateHUD();
   }
 
   onMiss() {
     this.lives--;
-    this.streak = 1;
+  this.streak = 1;
     this.audio.playMiss();
     if (this.lives <= 0) {
       this.endRun();
     }
+  this.ui.updateHUD();
   }
 
   endRun() {
     this.state = 'gameOver';
     this.ui.showGameOver();
+  this.ui.announce('Game Over');
     if (this.mode === 'endless' && this.score > this.bestEndless) {
       this.bestEndless = this.score;
       this.storage.setNumber('cl_best_endless', this.bestEndless);
@@ -169,9 +177,7 @@ export class Game {
   }
 
   startDaily() {
-    const today = new Date();
-    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-    this.rng.setSeed(seed);
+  this.rng.setSeed(dateSeed());
     this.startGame('daily');
   }
 
@@ -192,6 +198,7 @@ export class Game {
     this.drops = [];
     this.ring.setSectors(this.sectors);
     this.ui.hideMenu();
+  this.ui.updateHUD();
   }
 
   returnToMenu() {
@@ -228,12 +235,14 @@ export class Game {
   }
 
   loadSettings() {
-    this.audio.setMuted(this.storage.getBoolean('cl_audio_muted', false));
+  this.audio.setMuted(this.storage.getBoolean('cl_audio_muted', false));
+  this.reducedMotion = this.storage.getBoolean('cl_reduced_motion', false);
     // Load other settings
   }
 
   saveSettings() {
     this.storage.setBoolean('cl_audio_muted', this.audio.muted);
+  this.storage.setBoolean('cl_reduced_motion', this.reducedMotion);
     // Save other settings
   }
 }
